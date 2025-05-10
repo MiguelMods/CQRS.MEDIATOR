@@ -1,4 +1,5 @@
 ﻿using CQRS.MEDIATOR.API.Models.TodoItem.Entity;
+using CQRS.MEDIATOR.API.Repositories.Interfaces;
 using CQRS.MEDIATOR.API.Services.Interfaces;
 using CQRS.MEDIATOR.API.TodoItems.Commands;
 using CQRS.MEDIATOR.API.TodoItems.Queries;
@@ -9,7 +10,7 @@ namespace CQRS.MEDIATOR.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class TodoItemController(IMediator mediator, ITodoItemService todoItemService) : ControllerBase
+    public class TodoItemController(IMediator mediator, IGenericRepository<TodoItem> genericRepository, ITodoItemService todoItemService) : ControllerBase
     {
         public IMediator Mediator { get; } = mediator;
         public ITodoItemService TodoItemService { get; } = todoItemService;
@@ -24,6 +25,7 @@ namespace CQRS.MEDIATOR.API.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> GetTodoItem(long id)
         {
+            var resultGeneric = await genericRepository.GetByAsync(x => x.Id == id);
             var result = await Mediator.Send(new GetTodoItemByIdQuery { Id = id });
             if (result == null) return NotFound();
             return Ok(result);
