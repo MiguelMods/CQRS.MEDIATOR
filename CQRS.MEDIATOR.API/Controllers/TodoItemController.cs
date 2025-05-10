@@ -1,5 +1,6 @@
 ﻿using CQRS.MEDIATOR.API.Models.TodoItem.Entity;
 using CQRS.MEDIATOR.API.Repositories.Interfaces;
+using CQRS.MEDIATOR.API.Services.Interfaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -7,21 +8,21 @@ namespace CQRS.MEDIATOR.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class TodoItemController(IUnitOfWork unitOfWork) : ControllerBase
+    public class TodoItemController(ITodoItemService todoItemService) : ControllerBase
     {
-        public IUnitOfWork UnitOfWork { get; } = unitOfWork;
+        public ITodoItemService TodoItemService { get; } = todoItemService;
 
         [HttpGet]
         public async Task<IActionResult> GetTodoItems()
         {
-            var todoItems = await UnitOfWork.TodoItemRepository.GetAllAsync();
+            var todoItems = await TodoItemService.GetAllAsync();
             return Ok(todoItems);
         }
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetTodoItem(long id)
         {
-            var todoItem = await UnitOfWork.TodoItemRepository.GetAsync(id);
+            var todoItem = await TodoItemService.GetByIdAsync(id);
             if (todoItem == null) return NotFound();
             return Ok(todoItem);
         }
@@ -30,30 +31,22 @@ namespace CQRS.MEDIATOR.API.Controllers
         public async Task<IActionResult> CreateTodoItem([FromBody] TodoItem todoItem)
         {
             if (todoItem == null) return BadRequest();
-            var createdTodoItem = await UnitOfWork.TodoItemRepository.AddAsync(todoItem);
-            await UnitOfWork.SaveChangesAsync();
+            var createdTodoItem = await TodoItemService.AddAsync(todoItem);
             return CreatedAtAction(nameof(GetTodoItem), new { id = createdTodoItem.Id }, createdTodoItem);
         }
 
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateTodoItem(long id, [FromBody] TodoItem todoItem)
         {
-            if (todoItem == null || todoItem.Id != id) return BadRequest();
-            var existingTodoItem = await UnitOfWork.TodoItemRepository.GetAsync(id);
-            if (existingTodoItem == null) return NotFound();
-            await UnitOfWork.TodoItemRepository.UpdateAsync(todoItem);
-            await UnitOfWork.SaveChangesAsync();
-            return NoContent();
+            var result = await TodoItemService.UpdateAsync(todoItem);
+            return Ok(result);
         }
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteTodoItem(long id)
         {
-            var existingTodoItem = await UnitOfWork.TodoItemRepository.GetAsync(id);
-            if (existingTodoItem == null) return NotFound();
-            await UnitOfWork.TodoItemRepository.DeleteAsync(id);
-            await UnitOfWork.SaveChangesAsync();
-            return NoContent();
+            var result = await TodoItemService.DeleteAsync(id);
+            return Ok(result);
         }
     }
 }
