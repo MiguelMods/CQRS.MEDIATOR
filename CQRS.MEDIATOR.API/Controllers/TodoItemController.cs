@@ -1,44 +1,57 @@
 ﻿using CQRS.MEDIATOR.API.Models.TodoItem.Entity;
-using CQRS.MEDIATOR.API.Repositories.Interfaces;
 using CQRS.MEDIATOR.API.Services.Interfaces;
-using Microsoft.AspNetCore.Http;
+using CQRS.MEDIATOR.API.TodoItems.Commands;
+using CQRS.MEDIATOR.API.TodoItems.Queries;
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CQRS.MEDIATOR.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class TodoItemController(ITodoItemService todoItemService) : ControllerBase
+    public class TodoItemController(IMediator mediator, ITodoItemService todoItemService) : ControllerBase
     {
+        public IMediator Mediator { get; } = mediator;
         public ITodoItemService TodoItemService { get; } = todoItemService;
 
         [HttpGet]
         public async Task<IActionResult> GetTodoItems()
         {
-            var todoItems = await TodoItemService.GetAllAsync();
-            return Ok(todoItems);
+            var result = await Mediator.Send(new GetAllTodoItemQuery());
+            return Ok(result);
         }
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetTodoItem(long id)
         {
-            var todoItem = await TodoItemService.GetByIdAsync(id);
-            if (todoItem == null) return NotFound();
-            return Ok(todoItem);
+            var result = await Mediator.Send(new GetTodoItemByIdQuery { Id = id });
+            if (result == null) return NotFound();
+            return Ok(result);
         }
 
         [HttpPost]
         public async Task<IActionResult> CreateTodoItem([FromBody] TodoItem todoItem)
         {
-            if (todoItem == null) return BadRequest();
-            var createdTodoItem = await TodoItemService.AddAsync(todoItem);
-            return CreatedAtAction(nameof(GetTodoItem), new { id = createdTodoItem.Id }, createdTodoItem);
+            var result = await Mediator.Send(new CreateTodoItemCommand()
+            {
+                Title = todoItem.Title,
+                Description = todoItem.Description
+            });
+
+            return CreatedAtAction(nameof(GetTodoItem), new { id = result.Id }, result);
         }
 
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateTodoItem(long id, [FromBody] TodoItem todoItem)
         {
-            var result = await TodoItemService.UpdateAsync(todoItem);
+            var result = await Mediator.Send(new UpdateTodoItemCommand()
+            {
+                Id = id,
+                Title = todoItem.Title,
+                Description = todoItem.Description,
+                IsComplete = todoItem.IsComplete,
+                CompletedAt = todoItem.CompletedAt
+            });
             return Ok(result);
         }
 
